@@ -1,2 +1,2 @@
 # DualMPNN
-Harnessing structural alignment templates for protein sequence recovery using Dual-stream MPNN
+Harnessing structural alignment templates for protein sequence recovery using Dual-stream MPNNs
