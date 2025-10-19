@@ -41,7 +41,7 @@ def get_cosine_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
 class MyArgs(object):
   def __init__(self):
     #--------------------------------------------------------#
-    self.device_set = "cuda:7"
+    self.device_set = "cuda:0"
     self.path_for_outputs = "train_outputs/test"
     #--------------------------------------------------------#
     self.previous_checkpoint = ""
