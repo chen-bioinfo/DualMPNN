@@ -26,7 +26,7 @@ After downloading, process the dataset using this command:
 
     bin/foldseek convert2pdb pdb PDBdb --pdb-output-mode 1
 
-This is all you need to do to run foldseek in your environment.
+After this command, the foldseek is successfully setup in your environment.
 
 The detailed information about foldseek commands please visit the official repo: https://github.com/steineggerlab/foldseek
 
