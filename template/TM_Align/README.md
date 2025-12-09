@@ -1,1 +1,1 @@
-This is TM-align executable script which is compiled from TMalign.cpp file on Linux. If it's not working, just download the TMalign.cpp file from https://zhanggroup.org/TM-align/TMalign.cpp and compile it yourself.
+This is TM-align executable script which is compiled from TMalign.cpp file. If it's not working, just download the TMalign.cpp file from https://zhanggroup.org/TM-align/TMalign.cpp and compile it yourself.
