@@ -32,9 +32,9 @@ This script will automatically find template using foldseek and generate .pt for
 **See findTemplate.py for detailed usage.**
 
 ## 4. Train and Test
-Run Dual_train.py to train the model.
+Run Dual_train.py script to train the model.
 
-Run Dual_test.py to test the model.
+Run Dual_test.py script to test the model.
     
 
 
