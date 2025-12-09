@@ -22,6 +22,10 @@ Enter the directory and download the template dataset from foldseek server:
     cd foldseek
     bin/foldseek databases PDB pdb tmp 
 
+After downloading, process the dataset using this command:
+
+    bin/foldseek convert2pdb pdb PDBdb --pdb-output-mode 1
+
 The detailed information about foldseek commands please visit the official repo: https://github.com/steineggerlab/foldseek
 
 ## 3. Find Templates
