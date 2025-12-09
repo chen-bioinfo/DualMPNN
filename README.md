@@ -25,8 +25,8 @@ Enter the directory and download the template dataset from foldseek server:
 The detailed information about foldseek commands please visit the official repo: https://github.com/steineggerlab/foldseek
 
 ## 3. Find Templates
-The model takes constructed format as input. You could generate the formatted dataset by running the script 
-**template/findTemplate.py**
+The model takes constructed format as input. Given your dataset directory path, you could generate the formatted dataset by running the script 
+**template/findTemplate.py**.
 This script will automatically find template using foldseek and generate .pt format file which can be directly utilized by train or test code.
 
 **See findTemplate.py for detailed usage.**
