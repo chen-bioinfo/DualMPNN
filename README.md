@@ -7,7 +7,7 @@ a. You need to download foldseek implement locally and put it in foldseek direto
 
     📁 foldseek
     └─ 📁 bin
-        └─ 📄 foldseek (This is an executable file)
+        └─ 📄 foldseek (This is an executable file, about 700MB)
 
    
 b. Install the conda environment by the following commands:
