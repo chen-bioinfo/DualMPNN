@@ -5,4 +5,7 @@ This is the official implement of **DualMPNN**, which harnesses structural align
 ## 1. Setup Environment
 a. You need to install foldseek implement locally and put it in foldseek diretory.
 
-b. Install the conda environment by this command:
+b. Install the conda environment by the following commands:
+  `conda create -n DualMPNN python=3.9 numpy=1.26`
+  `conda activate DualMPNN`
+  `pip install -r requirement.txt`
