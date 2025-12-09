@@ -9,7 +9,7 @@ a. You need to install foldseek implement locally and put it in foldseek diretor
 
 └─ 📁 bin 
 
-   └─ 📄 foldseek
+\ \ \ └─ 📄 foldseek
    
 b. Install the conda environment by the following commands:
 
