@@ -16,6 +16,13 @@ b. Install the conda environment by the following commands:
     conda activate DualMPNN
     pip install -r requirements.txt
 
+## 2. Setup foldseek
+a. Enter the directory and download the template dataset from foldseek server:    
+    
+    cd foldseek
+    bin/foldseek databases PDB pdb tmp 
+
+    
 
 
 
