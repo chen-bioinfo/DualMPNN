@@ -22,6 +22,8 @@ a. Enter the directory and download the template dataset from foldseek server:
     cd foldseek
     bin/foldseek databases PDB pdb tmp 
 
+The detailed information please visit the official repo: https://github.com/steineggerlab/foldseek
+
     
 
 
