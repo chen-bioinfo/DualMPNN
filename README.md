@@ -7,8 +7,8 @@ a. You need to install foldseek implement locally and put it in foldseek diretor
 
 b. Install the conda environment by the following commands:
 
-  i `conda create -n DualMPNN python=3.9 numpy=1.26`
+    i `conda create -n DualMPNN python=3.9 numpy=1.26`
   
-  ii `conda activate DualMPNN`
+    ii `conda activate DualMPNN`
   
-  iii `pip install -r requirements.txt`
+    iii `pip install -r requirements.txt`
