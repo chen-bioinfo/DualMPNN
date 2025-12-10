@@ -45,7 +45,15 @@ Run Dual_train.py script to train the model.
 
 Run Dual_test.py script to test the model.
     
+# Citation
 
+```bibtex
+@inproceedings{liaodualmpnn,
+  title={DualMPNN: Harnessing Structural Alignments for High-Recovery Inverse Protein Folding},
+  author={Liao, Xuhui and Liang, Zhiqiang and Xiao, Liwei and Chen, Junjie and others},
+  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems}
+}
+```
 
 
 
