@@ -51,7 +51,9 @@ Run Dual_test.py script to test the model.
 @inproceedings{liaodualmpnn,
   title={DualMPNN: Harnessing Structural Alignments for High-Recovery Inverse Protein Folding},
   author={Liao, Xuhui and Liang, Zhiqiang and Xiao, Liwei and Chen, Junjie and others},
-  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems}
+  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
+  year={2025},
+  url={https://neurips.cc/virtual/2025/loc/san-diego/poster/118062}
 }
 ```
 
