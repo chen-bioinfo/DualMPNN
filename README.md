@@ -8,6 +8,8 @@ Paper url: https://neurips.cc/virtual/2025/loc/san-diego/poster/118062
 ## 1. Setup Environment
 a. You need to download foldseek implement locally and put it in foldseek diretory. It can be downloaded at https://github.com/steineggerlab/foldseek/releases
 
+You should put the executable file in diretory of DualMPNN below.
+
     📁 foldseek
     └─ 📁 bin
         └─ 📄 foldseek (This is an executable file, about 700MB)
