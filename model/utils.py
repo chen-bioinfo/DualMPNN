@@ -70,12 +70,15 @@ class MultiStruct_Loader():
         for idx, p_num in enumerate(pair_nums):
             pair_groups[p_num].append((idx, len_list[idx]))
 
+        # clutch by pair number, ensure that 'num_pairs' in one batch is the same
         self.clusters = []
         for p_num, group in pair_groups.items():
+            # sort by length
             sorted_group = sorted(group, key=lambda x: x[1])
             indices = [x[0] for x in sorted_group]
             lengths = [x[1] for x in sorted_group]
-
+            
+            # clutch strategy
             batch = []
             for ix, length in zip(indices, lengths):
                 if self._should_add_to_batch(batch, length):
@@ -89,6 +92,7 @@ class MultiStruct_Loader():
     def _should_add_to_batch(self, batch, new_length):
         if not batch:
             return True
+        # compute batch sum length
         avg_length = sum(self.len_list[i] for i in batch) / len(batch)
         predicted_avg = (avg_length * len(batch) + new_length) / (len(batch) + 1)
         return predicted_avg * (len(batch) + 1) <= self.batch_size
@@ -105,6 +109,8 @@ class MultiStruct_Loader():
             np.random.shuffle(self.clusters)
         for cluster in self.clusters:
             yield [self.dataset[i] for i in cluster]
+
+
 
 def worker_init_fn(worker_id):
     np.random.seed()
