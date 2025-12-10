@@ -47,10 +47,10 @@ def save_to_txt(rec_rate, rec_perp, output_path, tar_id, pair_id, S, S_pred, tm)
 class MyArgs(object):
   def __init__(self):
     #--------------------------------------------------------#
-    self.device_set = "cuda:1"
+    self.device_set = "cuda:0"
     self.path_testset = "dataset/T500/Test500.pt"
-    self.path_for_outputs = "test_outputs/test1"
-    self.model_path = "train_outputs/train2/model_weights/epoch40_step41960.pt"
+    self.path_for_outputs = ""                                  # Path for sequence generated
+    self.model_path = ""                                        # Path for train model checkpoint
     #--------------------------------------------------------#
     self.num_epochs = 200
     self.save_model_every_n_epochs = 5
@@ -80,10 +80,6 @@ if base_folder[-1] != '/':
     base_folder += '/'
 if not os.path.exists(base_folder):
     os.makedirs(base_folder)
-subfolders = ['model_weights']
-for subfolder in subfolders:
-    if not os.path.exists(base_folder + subfolder):
-        os.makedirs(base_folder + subfolder)
 
 PATH = args.model_path
 dataset_test = torch.load(args.path_testset)
