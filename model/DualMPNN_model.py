@@ -14,7 +14,6 @@ class DualMPNN(nn.Module):
                 dropout=0.1):
         super().__init__()
         
-        # Two independent streams (each with its own complete set of parameters)
         self.net_a = SingleStream(
             num_letters=num_letters,
             node_features=node_features,
@@ -41,23 +40,18 @@ class DualMPNN(nn.Module):
             dropout=dropout
         )
         
-        # Cross-attention layers
         self.cross_attn_layers = nn.ModuleList([
             AlignedCrossAttention(hidden_dim=hidden_dim)
             for _ in range(num_encoder_layers)
         ])
 
-        # Decoder cross-attention layers
         self.cross_dec_attn_layers = nn.ModuleList([
             AlignedCrossAttention(hidden_dim=hidden_dim)
             for _ in range(num_decoder_layers)
         ])
 
-    def split_tensor(tensor):
-        return torch.unbind(tensor, dim=1)  # Split the tensor along the second dimension
-
     def forward(self, X, S, mask, chain_M, residue_idx, chain_encoding_all, X_p, S_p, mask_p, chain_M_p, residue_idx_p, chain_encoding_all_p,align_pairs,tms):
-        # Independent forward pass for each stream (feature extraction remains separate)
+        # 'a' means Query Branch, 'b' means Template Branch
         B = X.size(0)
         E_a, E_idx_a = self.net_a.features(X, mask, residue_idx, chain_encoding_all)
         E_b, E_idx_b, h_V_b, h_E_b=[], [], [], []
@@ -69,7 +63,7 @@ class DualMPNN(nn.Module):
             E_b.append(eb)
             E_idx_b.append(ei)
         
-        # Initialize states
+      
         h_V_a, h_E_a = self.net_a.init_states(E_a, S)
         for k in range(num_pairs):
             hv, he = self.net_b.init_states_pair(E_b[k], S_p[k], self.net_a.W_s)
@@ -79,22 +73,19 @@ class DualMPNN(nn.Module):
         mask_attend = gather_nodes(mask.unsqueeze(-1),  E_idx_a).squeeze(-1)
         mask_attend = mask.unsqueeze(-1) * mask_attend
         
-        ca_dist = []
         aln_idx = []
         tm_score = []
             
         for k in range(num_pairs):
-            tm_score.append([b[k] for b in tms]) # tms shape: [B,P,L]
-            aln_idx.append([b[k] for b in align_pairs]) # align_pairs shape: [B,P,L_aln,2]
+            tm_score.append([b[k] for b in tms]) # tms:[B,P,L]
+            aln_idx.append([b[k] for b in align_pairs]) # align_pairs:[B,P,L_aln,2]
+
         for k in range(num_pairs):
             for i in range(B):
                 align_pairs = aln_idx[k][i]
                 a_indices = [p[0] for p in align_pairs]
                 b_indices = [p[1] for p in align_pairs]
                 h_V_a[i,a_indices,:] += h_V_b[k][i,b_indices,:] * tm_score[k][i]
-
-        # if num_pairs==0:
-        #     h_V_a = self.net_a.W_s(torch.randint(low=0, high=21, size=(X.shape[0], X.shape[1]), device=X.device))
 
         for (enc_a, enc_b), cross_attn in zip(zip(self.net_a.encoder_layers, self.net_b.encoder_layers), 
                                             self.cross_attn_layers):
@@ -104,7 +95,6 @@ class DualMPNN(nn.Module):
                 h_V_a, _ = cross_attn(h_V_a, h_V_b[k], mask, aln_idx[k], tm_score[k])
 
         h_ES_b, h_EXV_enc_fw_b, mask_bw_b=[],[],[]
-        # Initialize for decoding
         h_ES_a, h_EXV_enc_fw_a, mask_bw_a = self.net_a._init_decoder(h_V_a, h_E_a, E_idx_a, mask, chain_M, S)
         for k in range(num_pairs):
             hesb, hec, mb = self.net_b._init_decoder(h_V_b[k], h_E_b[k], E_idx_b[k], mask_p[k], chain_M_p[k], S_p[k], self.net_a.W_s)
@@ -112,22 +102,19 @@ class DualMPNN(nn.Module):
             h_EXV_enc_fw_b.append(hec)
             mask_bw_b.append(mb)
 
-        # Decoder pass
         for (dec_layer_a, dec_layer_b), cross_attn in zip(zip(self.net_a.decoder_layers, self.net_b.decoder_layers), 
                                                         self.cross_dec_attn_layers):
-            # Independent decoding step
             h_V_a = self.net_a._decoder_step(h_V_a, dec_layer_a, h_ES_a, h_EXV_enc_fw_a, mask_bw_a, mask, E_idx_a)
             for k in range(num_pairs):
                 h_V_b[k] = self.net_b._decoder_step(h_V_b[k], dec_layer_b, h_ES_b[k], h_EXV_enc_fw_b[k], mask_bw_b[k], mask_p[k], E_idx_b[k])
-                # Cross-attention interaction
                 h_V_a, _ = cross_attn(h_V_a, h_V_b[k], mask, aln_idx[k], tm_score[k])
 
-        # Final output
         logits = self.net_a.W_out(h_V_a)
         
         return F.log_softmax(logits, dim=-1)
     
     def sample(self, X, mask, chain_M, residue_idx, chain_encoding_all, X_p, S_p, mask_p, chain_M_p, residue_idx_p, chain_encoding_all_p,align_pairs,tms,temperature=1.0):
+
         B = X.size(0)
         E_a, E_idx_a = self.net_a.features(X, mask, residue_idx, chain_encoding_all)
         E_b, E_idx_b, h_V_b, h_E_b=[], [], [], []
@@ -138,8 +125,7 @@ class DualMPNN(nn.Module):
             eb, ei = self.net_b.features(X_p[k], mask_p[k], residue_idx_p[k], chain_encoding_all_p[k])
             E_b.append(eb)
             E_idx_b.append(ei)
-        
-        # Initialize states
+
         h_V_a, h_E_a = self.net_a.init_states(E_a)
         for k in range(num_pairs):
             hv, he = self.net_b.init_states_pair(E_b[k], S_p[k], self.net_a.W_s)
@@ -148,14 +134,13 @@ class DualMPNN(nn.Module):
         
         mask_attend = gather_nodes(mask.unsqueeze(-1),  E_idx_a).squeeze(-1)
         mask_attend = mask.unsqueeze(-1) * mask_attend
-        
-        
+
         aln_idx = []
         tm_score = []
             
         for k in range(num_pairs):
-            tm_score.append([b[k] for b in tms]) # tms shape: [B,P,L]
-            aln_idx.append([b[k] for b in align_pairs]) # align_pairs shape: [B,P,L_aln,2]
+            tm_score.append([b[k] for b in tms]) # tms:[B,P,L]
+            aln_idx.append([b[k] for b in align_pairs]) # align_pairs:[B,P,L_aln,2]
 
         for k in range(num_pairs):
             for i in range(B):
@@ -163,15 +148,15 @@ class DualMPNN(nn.Module):
                 a_indices = [p[0] for p in align_pairs]
                 b_indices = [p[1] for p in align_pairs]
                 h_V_a[i,a_indices,:] += h_V_b[k][i,b_indices,:] * tm_score[k][i]
+        # if num_pairs==0:
+        #     h_V_a = self.net_a.W_s(torch.randint(low=0, high=21, size=(X.shape[0], X.shape[1]), device=X.device))
 
-        # Encoder pass
         for (enc_a, enc_b), cross_attn in zip(zip(self.net_a.encoder_layers, self.net_b.encoder_layers), 
                                             self.cross_attn_layers):
-            # Independent encoding step
+
             h_V_a, h_E_a = enc_a(h_V_a, h_E_a, E_idx_a, mask, mask_attend)
             for k in range(num_pairs):
                 h_V_b[k], h_E_b[k] = enc_b(h_V_b[k], h_E_b[k], E_idx_b[k], mask_p[k])
-                # Cross-attention interaction
                 h_V_a, _ = cross_attn(h_V_a, h_V_b[k], mask, aln_idx[k], tm_score[k])
 
         h_ES_b, h_EXV_enc_fw_b, mask_bw_b=[],[],[]
@@ -180,26 +165,24 @@ class DualMPNN(nn.Module):
             h_ES_b.append(hesb)
             h_EXV_enc_fw_b.append(hec)
             mask_bw_b.append(mb)
-        
-        # Decoder pass
+
         for (dec_layer_a, dec_layer_b), cross_attn in zip(zip(self.net_a.decoder_layers, self.net_b.decoder_layers), 
                                                         self.cross_dec_attn_layers):
-            # Independent decoding step
+
             h_V_a = self.net_a.sampler(h_V_a, h_E_a, E_idx_a, mask, chain_M, 0.01, dec_layer_a)
             for k in range(num_pairs):
                 h_V_b[k] = self.net_b._decoder_step(h_V_b[k], dec_layer_b, h_ES_b[k], h_EXV_enc_fw_b[k], mask_bw_b[k], mask_p[k], E_idx_b[k])
-                # Cross-attention interaction
                 h_V_a, _ = cross_attn(h_V_a, h_V_b[k], mask, aln_idx[k], tm_score[k])
 
-        # Final output
-        logits = self.net_a.W_out(h_V_a) / temperature
+        logits = self.net_a.W_out(h_V_a) / 0.01
         probs = F.softmax(logits, dim=-1)
         batch_size, seq_len, num_classes = probs.shape
-        probs_2d = probs.reshape(-1, num_classes)
-        samples_flat = torch.multinomial(probs_2d, 1)
-        S = samples_flat.reshape(batch_size, seq_len)
+        probs_2d = probs.reshape(-1, num_classes)  # (batch_size * seq_len, num_classes)
+        samples_flat = torch.multinomial(probs_2d, 1)  # (batch_size * seq_len, 1)
+        S = samples_flat.reshape(batch_size, seq_len)  # (batch_size, seq_len)
         return S
     
+
 class SingleStream(nn.Module):
     def __init__(self, 
                 num_letters=21,
@@ -213,13 +196,11 @@ class SingleStream(nn.Module):
                 augment_eps=0.1,
                 dropout=0.1):
         super().__init__()
-        
-        # Structure is a direct copy of the original ProteinMPNN
+
         self.node_features = node_features
         self.edge_features = edge_features
         self.hidden_dim = hidden_dim
-        
-        # Feature extraction layer (same as original implementation)
+
         self.features = ProteinFeatures(
             node_features, 
             edge_features, 
@@ -228,11 +209,10 @@ class SingleStream(nn.Module):
             CA_only = False
         )
         
-        # Embedding layers
+
         self.W_e = nn.Linear(edge_features, hidden_dim, bias=True)
         self.W_s = nn.Embedding(vocab, hidden_dim)
-        
-        # Encoder layers
+
         self.encoder_layers = nn.ModuleList([
             EncLayer(
                 hidden_dim, 
@@ -240,32 +220,28 @@ class SingleStream(nn.Module):
                 dropout=dropout
             ) for _ in range(num_encoder_layers)
         ])
-        
-        # Decoder layers 
+
         self.decoder_layers = nn.ModuleList([
             DecLayer(
                 hidden_dim,
-                hidden_dim*3,  # Matches the original num_in parameter
+                hidden_dim*3,
                 dropout=dropout
             ) for _ in range(num_decoder_layers)
         ])
         
         self.W_out = nn.Linear(hidden_dim, num_letters, bias=True)
-        
-        # Parameter initialization (same as original implementation)
+
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
     def init_states(self, E, S=None):
-        """Exactly replicates the original h_V initialization logic"""
         h_V = torch.zeros((E.shape[0], E.shape[1], E.shape[-1]), device=E.device)
         h_E = self.W_e(E)
         return h_V, h_E
 
     def init_states_pair(self, E, S):
-        """Exactly replicates the original h_V initialization logic"""
-        h_V = initialize_h_V(self, E, S, onehot_dim=21, init_ratio=1.0, error_init_ratio=0.0)   # Initialize node embeddings with 20% one-hot and 80% zeros
+        h_V = initialize_h_V(self, E, S, onehot_dim=21, init_ratio=1.0, error_init_ratio=0.0)
         h_E = self.W_e(E)
         return h_V, h_E
 
@@ -273,17 +249,12 @@ class SingleStream(nn.Module):
         device = h_V.device
         h_S = self.W_s(S)
         h_ES = cat_neighbors_nodes(h_S, h_E, E_idx)
-        
-        # Replicate original decoding order generation logic
 
         h_EX_encoder = cat_neighbors_nodes(torch.zeros_like(h_S), h_E, E_idx)
         h_EXV_encoder = cat_neighbors_nodes(h_V, h_EX_encoder, E_idx)
 
         chain_M = chain_M * mask
         decoding_order = torch.argsort((chain_M+0.0001)*(torch.abs(torch.randn(chain_M.shape, device=device))))
- 
-        
-        # Replicate original mask processing logic
         mask_size = E_idx.shape[1]
         permutation_matrix_reverse = torch.nn.functional.one_hot(decoding_order, num_classes=mask_size).float()
         order_mask_backward = torch.einsum('ij, biq, bjp->bqp',(1-torch.triu(torch.ones(mask_size,mask_size, device=device))), permutation_matrix_reverse, permutation_matrix_reverse)
@@ -291,15 +262,11 @@ class SingleStream(nn.Module):
         mask_1D = mask.view([mask.size(0), mask.size(1), 1, 1])
         mask_bw = mask_1D * mask_attend
         mask_fw = mask_1D * (1. - mask_attend)
-        
-        # Decoder pass
         h_EXV_encoder_fw = mask_fw * h_EXV_encoder
         for i, layer in enumerate(self.decoder_layers):
             h_ESV = cat_neighbors_nodes(h_V, h_ES, E_idx)
             h_ESV = mask_bw * h_ESV + h_EXV_encoder_fw
             h_V = layer(h_V, h_ESV, mask)
-
-            # New cross-attention step
             if cross_attn_layers and h_V_b is not None:
                 cross_attn = cross_attn_layers[i]
                 h_V, _ = cross_attn(h_V, h_V_b, mask, align_pairs)
@@ -340,6 +307,7 @@ class SingleStream(nn.Module):
             )
             logits = self.W_out(h_V_t) / temperature
         return h_V
+    
     def _init_decoder(self, h_V, h_E, E_idx, mask, chain_M, S):
         device = h_V.device
         h_S = self.W_s(S)
@@ -362,25 +330,6 @@ class SingleStream(nn.Module):
         h_EXV_encoder_fw = mask_fw * h_EXV_encoder
         return h_ES, h_EXV_encoder_fw, mask_bw
 
-    def cmlm_init_decoder(self, h_V, h_E, E_idx, mask, chain_M, S):
-        device = h_V.device
-        h_S = self.W_s(S)
-        h_ES = cat_neighbors_nodes(h_S, h_E, E_idx)
-        
-        h_EX_encoder = cat_neighbors_nodes(torch.zeros_like(h_S), h_E, E_idx)
-        h_EXV_encoder = cat_neighbors_nodes(h_V, h_EX_encoder, E_idx)
-
-        chain_M = chain_M * mask
-        mask_1D = mask.view([mask.size(0), mask.size(1), 1, 1])
-        mask_attend = torch.zeros_like(E_idx).to(mask_1D).unsqueeze(-1)
-        # mask_bw = mask_1D * mask_attend
-        mask_bw = mask_1D * (1. - mask_attend)
-        mask_fw = mask_1D * (1. - mask_attend)
-        
-        h_EXV_encoder_fw = mask_fw * h_EXV_encoder
-        return h_ES, h_EXV_encoder_fw, mask_bw
-
-    # New single-step decoding function
     def _decoder_step(self, h_V, layer, h_ES, h_EXV_encoder_fw, mask_bw, mask, E_idx):
         h_ESV = cat_neighbors_nodes(h_V, h_ES, E_idx)
         h_ESV = mask_bw * h_ESV + h_EXV_encoder_fw
@@ -400,13 +349,11 @@ class SingleStream_P(nn.Module):
                 augment_eps=0.1,
                 dropout=0.1):
         super().__init__()
-        
-        # Structure is a direct copy of the original ProteinMPNN
+
         self.node_features = node_features
         self.edge_features = edge_features
         self.hidden_dim = hidden_dim
-        
-        # Feature extraction layer (same as original implementation)
+
         self.features = ProteinFeatures(
             node_features, 
             edge_features, 
@@ -414,50 +361,37 @@ class SingleStream_P(nn.Module):
             augment_eps=augment_eps,
             CA_only = True
         )
-        
-        # Embedding layers
         self.W_e = nn.Linear(edge_features, hidden_dim)
         self.W_s = nn.Embedding(vocab, hidden_dim)
-        
-
-        
-        # Encoder layers
         self.encoder_layers = nn.ModuleList([
             EncLayer(
                 hidden_dim, 
-                hidden_dim*2,  # Matches the original num_in parameter
+                hidden_dim*2,
                 dropout=dropout
             ) for _ in range(num_encoder_layers)
         ])
-        # Decoder layers 
         self.decoder_layers = nn.ModuleList([
             DecLayer(
                 hidden_dim,
-                hidden_dim*3,  # Matches the original num_in parameter
+                hidden_dim*3,
                 dropout=dropout
             ) for _ in range(num_decoder_layers)
         ])
-        
-        # self.W_out = nn.Linear(hidden_dim, num_letters, bias=True)
-
-        # Parameter initialization (same as original implementation)
+ 
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
     def init_states(self, E, S):
-        """Exactly replicates the original h_V initialization logic"""
         h_V = torch.zeros((E.shape[0], E.shape[1], self.hidden_dim), device=E.device)
         h_E = self.W_e(E)
         return h_V, h_E
 
     def init_states_pair(self, E, S, w_s):
-        """Exactly replicates the original h_V initialization logic"""
-        h_V = initialize_h_V(self, E, S, w_s, onehot_dim=21, init_ratio=1.0, error_init_ratio=0.0)   # Initialize node embeddings with 20% one-hot and 80% zeros
+        h_V = initialize_h_V(self, E, S, w_s, onehot_dim=21, init_ratio=1.0, error_init_ratio=0.0) 
         h_E = self.W_e(E)
         return h_V, h_E
 
-    # New function to initialize the decoder
     def _init_decoder(self, h_V, h_E, E_idx, mask, chain_M, S, W_s):
         device = h_V.device
         h_S = W_s(S)
@@ -480,30 +414,41 @@ class SingleStream_P(nn.Module):
         h_EXV_encoder_fw = mask_fw * h_EXV_encoder
         return h_ES, h_EXV_encoder_fw, mask_bw
 
-    def cmlm_init_decoder(self, h_V, h_E, E_idx, mask, chain_M, S, W_s):
-        device = h_V.device
-        h_S = W_s(S)
-        h_ES = cat_neighbors_nodes(h_S, h_E, E_idx)
-        
-        h_EX_encoder = cat_neighbors_nodes(torch.zeros_like(h_S), h_E, E_idx)
-        h_EXV_encoder = cat_neighbors_nodes(h_V, h_EX_encoder, E_idx)
-
-        chain_M = chain_M * mask
-        mask_1D = mask.view([mask.size(0), mask.size(1), 1, 1])
-        mask_attend = torch.zeros_like(E_idx).to(mask_1D).unsqueeze(-1)
-        # mask_bw = mask_1D * mask_attend
-        mask_bw = mask_1D * (1. - mask_attend)
-        mask_fw = mask_1D * (1. - mask_attend)
-        
-        h_EXV_encoder_fw = mask_fw * h_EXV_encoder
-        return h_ES, h_EXV_encoder_fw, mask_bw
-    # New single-step decoding function
     def _decoder_step(self, h_V, layer, h_ES, h_EXV_encoder_fw, mask_bw, mask, E_idx):
         h_ESV = cat_neighbors_nodes(h_V, h_ES, E_idx)
         h_ESV = mask_bw * h_ESV + h_EXV_encoder_fw
         return layer(h_V, h_ESV, mask)
 
 class AlignedCrossAttention(nn.Module):
+    def __init__(self, hidden_dim, attn_dim=256, dropout=0.1):
+        super().__init__()
+        self.query = nn.Linear(hidden_dim, hidden_dim)
+        self.key = nn.Linear(hidden_dim, hidden_dim)
+        self.value = nn.Linear(hidden_dim, hidden_dim)
+        self.scale = hidden_dim ** -0.5
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, h_a, h_b, mask, align_pairs_list, tm_scores=None):
+        # Aligned-wise cross attention
+
+        batch_size = h_a.size(0)
+        updates = torch.zeros_like(h_a) 
+
+        for i in range(batch_size):
+            align_pairs = align_pairs_list[i]
+            a_indices = [p[0] for p in align_pairs]
+            b_indices = [p[1] for p in align_pairs]
+
+            Q = self.query(h_a[i, a_indices, :])  # (num_pairs, hidden)
+            K = self.key(h_b[i, b_indices, :])    # (num_pairs, hidden)
+            V = self.value(h_b[i, b_indices, :])  # (num_pairs, hidden)
+            
+            attn = torch.einsum('ph,ph->p', Q, K) * self.scale
+            attn = F.softmax(attn, dim=0)
+            updates[i, a_indices, :] = V * attn.unsqueeze(-1) * tm_scores[i]
+
+        return h_a + self.dropout(updates), h_b
+
     """A layer that performs attention only at predefined aligned positions"""
     def __init__(self, hidden_dim, attn_dim=256, dropout=0.1):
         super().__init__()
