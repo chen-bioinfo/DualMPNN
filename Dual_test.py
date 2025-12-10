@@ -60,8 +60,8 @@ class MyArgs(object):
     self.batch_size = 10
     self.max_protein_length = 2000
     self.hidden_dim = 128
-    self.num_encoder_layers = 4
-    self.num_decoder_layers = 4
+    self.num_encoder_layers = 3
+    self.num_decoder_layers = 3
     self.num_neighbors = 48
     self.dropout = 0.1
     self.backbone_noise = 0.0
