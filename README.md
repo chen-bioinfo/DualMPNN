@@ -1,6 +1,8 @@
 # DualMPNN
 This is the official implement of **DualMPNN**, harnessing structural alignment templates for protein sequence recovery using Dual-stream MPNNs.
 
+<img width="1157" height="690" alt="image" src="https://github.com/user-attachments/assets/6dfbbc15-9f64-4252-bd19-0ba91acfeff3" />
+
 # Setup
 ## 1. Setup Environment
 a. You need to download foldseek implement locally and put it in foldseek diretory. It can be downloaded at https://github.com/steineggerlab/foldseek/releases
