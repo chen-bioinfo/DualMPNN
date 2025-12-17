@@ -51,12 +51,13 @@ Run Dual_test.py script to test the model.
 # Citation
 
 ```bibtex
-@inproceedings{liaodualmpnn,
-  title={DualMPNN: Harnessing Structural Alignments for High-Recovery Inverse Protein Folding},
-  author={Liao Xuhui and Wang Qiyu and Liang Zhiqiang and others},
-  booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
-  year={2025},
-  url={https://neurips.cc/virtual/2025/loc/san-diego/poster/118062}
+@inproceedings{
+liao2025dualmpnn,
+title={Dual{MPNN}: Harnessing Structural Alignments for High-Recovery Inverse Protein Folding},
+author={Xuhui Liao and Qiyu Wang and Zhiqiang Liang and Liwei Xiao and Junjie Chen},
+booktitle={The Thirty-ninth Annual Conference on Neural Information Processing Systems},
+year={2025},
+url={https://openreview.net/forum?id=R42O6v84cX}
 }
 ```
 
